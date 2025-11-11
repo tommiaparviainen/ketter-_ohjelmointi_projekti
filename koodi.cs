@@ -64,13 +64,6 @@ namespace perunanryostajat
     }
 
 
-
-
-
-
-
-   
-
     public class ContractBlock
     {
         private int blockID { get; set; }

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using MySql.Data;
-using perunanryostajat;
+
 
 namespace sqlperunat
 {
@@ -13,7 +13,7 @@ namespace sqlperunat
     {
         static void Main(string[] args)
         {
-            string mysqlconn = "server=127.0.0.1;user=root;database=perunat;uid=root;password;";
+            string mysqlconn = "server=127.0.0.1;user=root;database=peruna;password;";
             MySqlConnection connection = new MySqlConnection(mysqlconn);
 
             try
