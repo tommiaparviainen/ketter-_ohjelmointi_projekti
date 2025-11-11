@@ -1,17 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
+
 namespace perunanryostajat
 {
+
     public class User
     {
-        private int userID;
-        private string username;
-        private string email;
+    
+        private int userID { get; set; }
+        private string username { get; set; }
+        private string email { get; set; }
 
         public void createUser(int id, string name, string mail)
         {
@@ -19,7 +24,7 @@ namespace perunanryostajat
             username = name;
             email = mail;
         }
-
+       
         public void editUser( string newName, string newEmail)
         {
             username = newName;
@@ -33,13 +38,14 @@ namespace perunanryostajat
             email = null;
 
         }
+       
     }
 
     public class BlockCategory
     {
-        public int categoryId;
-        private string name;
-        private string description;
+        public int categoryId { get; set; }
+        private string name { get; set; }
+        private string description { get; set; }
 
         public void createCategory(int ID, string nm, string desc)
         {
@@ -100,11 +106,11 @@ namespace perunanryostajat
 
     public class ContractBlockAssigment
     {
-        private int assignmentID;
-        private Contract contract;
-        private ContractBlock block;
-        private int orderNumber;
-        private string editableCopy;
+        private int assignmentID { get; set; }
+        private Contract contract { get; set; }
+        private ContractBlock block { get; set; }
+        private int orderNumber { get; set; }
+        private string editableCopy { get; set; }
 
         public void assignBlock(int id, Contract c, ContractBlock b, int order, string copy)
         {
@@ -129,8 +135,8 @@ namespace perunanryostajat
 
     public class Contract
     {
-        private int contractId;
-        private string title;
+        private int contractId { get; set; }
+        private string title { get; set; }
         public List<BlockCategory> Blocks { get; private set; } = new List<BlockCategory>();
 
         
@@ -177,9 +183,9 @@ namespace perunanryostajat
 
     public class ContractStakeHolder
     {
-        private int stakeHolderID;
-        private Contract contract;
-        private User user; 
+        private int stakeHolderID{ get; set; }
+        private Contract contract { get; set; }
+        private User user { get; set; }
         //private StakeHolderRole role;
 
         public void assignStakeHolder(int id, Contract c, User u)
@@ -194,10 +200,10 @@ namespace perunanryostajat
       
     public class Approval
     {
-        private int approvalID;
-        private Contract contract;
-        private User user;
-        private DateTime approvedAt;
+        private int approvalID { get; set; }
+        private Contract contract { get; set; }
+        private User user { get; set; }
+        private DateTime approvedAt { get; set; }
         public void approve(int id, Contract c, User u, DateTime date)
         {
             approvalID = id;
@@ -209,12 +215,12 @@ namespace perunanryostajat
 
     public class Comment
     {
-        private int commentID;
-        private Contract contract;
-        private User user;
-        private string content;
-        private DateTime createdAt;
-        private bool visibility;
+        private int commentID { get; set; }
+        private Contract contract { get; set; }
+        private User user { get; set; }
+        private string content { get; set; }
+        private DateTime createdAt { get; set; }
+        private bool visibility { get; set; }
         public void addComment(int id, Contract c, User u, string cnt, DateTime date)
         {
 
