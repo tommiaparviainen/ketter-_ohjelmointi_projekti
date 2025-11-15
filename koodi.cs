@@ -1,17 +1,123 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+//Import namespace OleDb for databases (outside class)
+using System.Data.OleDb;
+//System.Data for command object
+using System.Data;
 
 
 namespace perunanryostajat
 {
+    class DataService
+    {
+        private OleDbConnection myConnection;
 
-    public class User
+        public DataService()
+        {
+            //In class method(s), create and open connection
+            //This can be done either once (e.g. Page_Load) for each
+            //page request, or separately every time db connection is required
+            String connstr;
+            //set the path here acording to the location of database folder
+            String projectPath = @"..\..\..\Data";
+            connstr = "Provider = Microsoft.ACE.OLEDB.12.0;" + @"Data Source = " +
+            projectPath + @"\CustomerOrders2019.accdb;";
+            //OleDbConnection requires namespace System.Data.OleDb
+            myConnection = new OleDbConnection();
+            myConnection.ConnectionString = connstr;
+            myConnection.Open();
+        }
+
+        private OleDbDataReader GetData(string[] fields, string table)
+        {
+            OleDbCommand myCommand = new OleDbCommand();
+
+            myCommand.Connection = myConnection;
+            //SQL query string
+            myCommand.CommandText = "SELECT ";
+
+            foreach (string s in fields)
+                myCommand.CommandText += s + ", ";
+
+            myCommand.CommandText = myCommand.CommandText.Remove(myCommand.CommandText.LastIndexOf(","));
+            myCommand.CommandText += " FROM " + table;
+            //CommandType requires namespace System.Data
+            myCommand.CommandType = CommandType.Text;
+
+            //Execute the SQL request command and
+            //store the output in myReader object
+            OleDbDataReader myReader;
+            myReader = myCommand.ExecuteReader();
+
+            return myReader;
+        }
+
+        private OleDbDataReader GetDataWhereString(string[] fields, string table, string keyField, string keyValue)
+        {
+            OleDbCommand myCommand = new OleDbCommand();
+
+            myCommand.Connection = myConnection;
+            //SQL query string
+            myCommand.CommandText = "SELECT ";
+
+            foreach (string s in fields)
+                myCommand.CommandText += s + ", ";
+
+            myCommand.CommandText = myCommand.CommandText.Remove(myCommand.CommandText.LastIndexOf(","));
+            myCommand.CommandText += " FROM " + table;
+
+            myCommand.CommandText += " WHERE " + keyField + "='" + keyValue + "';";
+            //CommandType requires namespace System.Data
+            myCommand.CommandType = CommandType.Text;
+
+
+            //CommandType requires namespace System.Data
+            myCommand.CommandType = CommandType.Text;
+
+            //Execute the SQL request command and
+            //store the output in myReader object
+            OleDbDataReader myReader;
+            myReader = myCommand.ExecuteReader();
+
+            return myReader;
+        }
+
+        private OleDbDataReader GetDataWhereBetween(string[] fields, string table, string keyField, double minValue, double maxValue)
+        {
+            OleDbCommand myCommand = new OleDbCommand();
+
+            myCommand.Connection = myConnection;
+            //SQL query string
+            myCommand.CommandText = "SELECT ";
+
+            foreach (string s in fields)
+                myCommand.CommandText += s + ", ";
+
+            myCommand.CommandText = myCommand.CommandText.Remove(myCommand.CommandText.LastIndexOf(","));
+            myCommand.CommandText += " FROM " + table;
+
+            myCommand.CommandText += " WHERE " + keyField + " BETWEEN " + minValue + " AND " + maxValue + ";";
+            //CommandType requires namespace System.Data
+            myCommand.CommandType = CommandType.Text;
+
+
+            //CommandType requires namespace System.Data
+            myCommand.CommandType = CommandType.Text;
+
+            //Execute the SQL request command and
+            //store the output in myReader object
+            OleDbDataReader myReader;
+            myReader = myCommand.ExecuteReader();
+
+            return myReader;
+        }
+
+    //--------------------------------------------------------------------------------------------------------------------------------------------------
+
+        public class User
     {
     
         private int userID { get; set; }
