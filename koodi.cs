@@ -22,17 +22,36 @@ namespace perunanryostajat
             //page request, or separately every time db connection is required
             String connstr;
             //set the path here acording to the location of database folder
-            String projectPath = @"..\..\..\Data";
+            String projectPath = @"C:\Users\kkyyr\Downloads\";
             connstr = "Provider = Microsoft.ACE.OLEDB.12.0;" + @"Data Source = " +
-            projectPath + @"\CustomerOrders2019.accdb;";
+            projectPath + @"C:\Users\kkyyr\Downloads\peruna.sql";
+            /*- Määrittää tiedostopolun tietokantaan
+            - Luo OleDbConnection-olion ja avaa yhteyden
+            - Käyttää Microsoft Access -provideria (Microsoft.ACE.OLEDB.12.0)
+            */
             //OleDbConnection requires namespace System.Data.OleDb
             myConnection = new OleDbConnection();
             myConnection.ConnectionString = connstr;
             myConnection.Open();
+
+            /*
+
+             * 
+             * Luokka DataService:
+            - Luo ja avaa yhteyden Access-tietokantaan (CustomerOrders2019.accdb)
+            - Tarjoaa kolme metodia tietojen hakemiseen:
+            - GetData: hakee kaikki rivit tietyistä kentistä
+            - GetDataWhereString: hakee rivit, joissa kenttä vastaa tiettyä arvoa
+            - GetDataWhereBetween: hakee rivit, joissa kentän arvo on tietyllä välillä
+            */
         }
 
         private OleDbDataReader GetData(string[] fields, string table)
         {
+            /*- Rakentaa SQL-kyselyn tyyliin:
+                SELECT Field1, Field2 FROM TableName
+                - Palauttaa OleDbDataReader-olion, jolla voi lukea tulokset
+                */
             OleDbCommand myCommand = new OleDbCommand();
 
             myCommand.Connection = myConnection;
@@ -56,7 +75,10 @@ namespace perunanryostajat
         }
 
         private OleDbDataReader GetDataWhereString(string[] fields, string table, string keyField, string keyValue)
-        {
+        {/*- Rakentaa SQL-kyselyn tyyliin:
+        SELECT Field1, Field2 FROM TableName WHERE KeyField = 'KeyValue'
+        - Soveltuu tekstimuotoisiin ehtoihin (esim. asiakasnimi = "Matti")
+        */
             OleDbCommand myCommand = new OleDbCommand();
 
             myCommand.Connection = myConnection;
@@ -87,6 +109,10 @@ namespace perunanryostajat
 
         private OleDbDataReader GetDataWhereBetween(string[] fields, string table, string keyField, double minValue, double maxValue)
         {
+            /*- Rakentaa SQL-kyselyn tyyliin:
+        SELECT Field1, Field2 FROM TableName WHERE KeyField BETWEEN minValue AND maxValue
+        - Soveltuu numeerisiin ehtoihin (esim. tilauksen summa välillä 100–500)
+        */
             OleDbCommand myCommand = new OleDbCommand();
 
             myCommand.Connection = myConnection;
@@ -114,8 +140,40 @@ namespace perunanryostajat
 
             return myReader;
         }
+    }
+        //--------------------------------------------------------------------------------------------------------------------------------------------------
 
-    //--------------------------------------------------------------------------------------------------------------------------------------------------
+        //kaikki enumit tässä samassa
+
+        enum UserRole
+        {
+            INTERNAL,
+            EXTERNAL,
+            ADMIN
+        }
+
+        enum ContractStatus
+        {
+            DRAFT,
+            PENDING_APPROVAL,
+            APPROVED,
+            SENT_TO_CLIENT
+        }
+
+        enum StakeholderRole
+        {
+            VIEWER,
+            EDITOR,
+            APPROVER
+        }
+
+        enum Visibility
+        {
+            INTERNAL,
+            EXTERNAL
+        }
+
+        //kaikki enumit tässä samassa 
 
         public class User
     {
@@ -123,13 +181,16 @@ namespace perunanryostajat
         private int userID { get; set; }
         private string username { get; set; }
         private string email { get; set; }
+        private bool IsInternal { get; set; }
+        private UserRole role { get; set; }
 
-        public void createUser(int id, string name, string mail)
+        public void createUser(int id, string name, string mail, UserRole role
         {
             userID = id;
             username = name;
             email = mail;
-        }
+            Role = role
+            }
        
         public void editUser( string newName, string newEmail)
         {
@@ -139,13 +200,15 @@ namespace perunanryostajat
 
         public void deleteUser()
         {
-            userID = 0;
+            
             username = null;
             email = null;
 
         }
        
     }
+
+
 
     public class BlockCategory
     {
@@ -162,7 +225,7 @@ namespace perunanryostajat
 
         public void editCategory(int ID, string nm, string desc)
         {
-            categoryId = ID;
+            
             name = nm;
             description = desc;
         }
@@ -174,7 +237,7 @@ namespace perunanryostajat
     {
         private int blockID { get; set; }
         private string title { get; set; }
-            private string content { get; set; }
+        private string content { get; set; }
 
             public void createBlock(int block, string tit, string cont)
         {
@@ -185,14 +248,14 @@ namespace perunanryostajat
 
         }
 
-        public void copyBlock(int newBlockID, string newTitle, string newContent)
-        {
-            blockID = newBlockID;
-            title = newTitle;
-            content = newContent;
-        }
+       
+            public ContractBlock CopyBlock(int newId, string newTitle, string newContent)
+            {
+                return new ContractBlock(newId, newTitle, newContent);
+            }
 
-        public void EditBlock(string newTitle, string newContent)
+
+            public void EditBlock(string newTitle, string newContent)
         {
             title = newTitle;
             content = newContent;
@@ -246,10 +309,10 @@ namespace perunanryostajat
             title = tl;
         }
 
-        public void editContract(int Id, string tl)
+        public void editContract( string newTitle)
         {
-            contractId = Id;
-            title = tl;
+            
+            title = newTitle;
         }
 
         public void addBlock(BlockCategory block)
@@ -277,10 +340,15 @@ namespace perunanryostajat
             }
 
         }
+            public void RemoveBlockAssignment(int assignmentId)
+            {
+                BlockAssignments.RemoveAll(a => a.AssignmentID == assignmentId);
+            }
 
-    }
 
-    public class ContractStakeHolder
+        }
+
+        public class ContractStakeHolder
     {
         private int stakeHolderID{ get; set; }
         private Contract contract { get; set; }
