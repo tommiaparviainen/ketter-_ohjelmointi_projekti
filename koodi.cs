@@ -182,16 +182,16 @@ namespace perunanryostajat
         private string username { get; set; }
         private string email { get; set; }
         private bool IsInternal { get; set; }
-        private UserRole role { get; set; }
+        private UserRole Role { get; set; }
 
-        public void createUser(int id, string name, string mail, UserRole role
+        public void CreateUser(int id, string name, string mail)
         {
             userID = id;
             username = name;
             email = mail;
-            Role = role
-            }
-       
+            
+        }
+
         public void editUser( string newName, string newEmail)
         {
             username = newName;
@@ -239,23 +239,20 @@ namespace perunanryostajat
         private string title { get; set; }
         private string content { get; set; }
 
-            public void createBlock(int block, string tit, string cont)
+        public ContractBlock(int block, string tit, string cont)
         {
-
             blockID = block;
             title = tit;
             content = cont;
-
         }
 
-       
-            public ContractBlock CopyBlock(int newId, string newTitle, string newContent)
-            {
-                return new ContractBlock(newId, newTitle, newContent);
-            }
+        public ContractBlock CopyBlock(int newId, string newTitle, string newContent)
+        {
+            return new ContractBlock(newId, newTitle, newContent);
+        }
 
 
-            public void EditBlock(string newTitle, string newContent)
+        public void EditBlock(string newTitle, string newContent)
         {
             title = newTitle;
             content = newContent;
@@ -338,17 +335,17 @@ namespace perunanryostajat
             {
                 Blocks.Remove(blockToRemove);
             }
-
-        }
-            public void RemoveBlockAssignment(int assignmentId)
-            {
-                BlockAssignments.RemoveAll(a => a.AssignmentID == assignmentId);
-            }
-
-
         }
 
-        public class ContractStakeHolder
+         public void RemoveBlock(int categoryId)
+        {
+           
+        }
+
+
+    }
+
+    public class ContractStakeHolder
     {
         private int stakeHolderID{ get; set; }
         private Contract contract { get; set; }
@@ -414,40 +411,40 @@ namespace perunanryostajat
     {
         static void Main(string[] args)
         {
-            User user = new User();
-            user.createUser(1, "Kaisa", "kaisa@example.com");
+            //User user = new User();
+            //user.CreateUser(1, "Kaisa", "kaisa@example.com");
 
-            // 2. Luo sopimus
-            Contract contract = new Contract();
-            contract.createContract(100, "Työsopimus");
+            //// 2. Luo sopimus
+            //Contract contract = new Contract();
+            //contract.createContract(100, "Työsopimus");
 
-            // 3. Luo lohkokategoria ja lisää sopimukseen
-            BlockCategory category = new BlockCategory();
-            category.createCategory(10, "Yleiset ehdot", "Sisältää yleiset sopimusehdot");
-            contract.addBlock(category);
+            //// 3. Luo lohkokategoria ja lisää sopimukseen
+            //BlockCategory category = new BlockCategory();
+            //category.createCategory(10, "Yleiset ehdot", "Sisältää yleiset sopimusehdot");
+            //contract.addBlock(category);
 
-            // 4. Luo sopimuslohko
-            ContractBlock block = new ContractBlock();
-            block.createBlock(200, "Palkkaus", "Palkka on 3000€/kk");
+            //// 4. Luo sopimuslohko
+            ////ContractBlock block = new ContractBlock();
+            ////block.CreateBlock(200, "Palkkaus", "Palkka on 3000€/kk");
 
-            // 5. Sijoita lohko sopimukseen
-            ContractBlockAssigment assignment = new ContractBlockAssigment();
-            assignment.assignBlock(500, contract, block, 1, "Muokattava versio: Palkka 3200€/kk");
+            //// 5. Sijoita lohko sopimukseen
+            //ContractBlockAssigment assignment = new ContractBlockAssigment();
+            //assignment.assignBlock(500, contract, //block, 1, "Muokattava versio: Palkka 3200€/kk");
 
-            // 6. Lisää sidoshenkilö
-            ContractStakeHolder stakeholder = new ContractStakeHolder();
-            stakeholder.assignStakeHolder(600, contract, user);
+            //// 6. Lisää sidoshenkilö
+            //ContractStakeHolder stakeholder = new ContractStakeHolder();
+            //stakeholder.assignStakeHolder(600, contract, user);
 
-            // 7. Hyväksyntä
-            Approval approval = new Approval();
-            approval.approve(700, contract, user, DateTime.Now);
+            //// 7. Hyväksyntä
+            //Approval approval = new Approval();
+            //approval.approve(700, contract, user, DateTime.Now);
 
-            // 8. Kommentti
-            Comment comment = new Comment();
-            comment.addComment(800, contract, user, "Voidaanko palkka neuvotella?", DateTime.Now);
+            //// 8. Kommentti
+            //Comment comment = new Comment();
+            //comment.addComment(800, contract, user, "Voidaanko palkka neuvotella?", DateTime.Now);
 
-            // Tulostuksia testin vuoksi
-            Console.WriteLine("Testiohjelma suoritettu onnistuneesti.");
+            //// Tulostuksia testin vuoksi
+            //Console.WriteLine("Testiohjelma suoritettu onnistuneesti.");
 
         }
     }
