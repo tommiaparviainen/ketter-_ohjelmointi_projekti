@@ -167,17 +167,16 @@ namespace hellopello
             using (MySqlConnection connection = new MySqlConnection(MySqlCon))
             {
                 connection.Open();
-
                 string query = @"INSERT INTO contractblocks (Title, Content, CreatedBy, CreatedAt) 
-                             VALUES (@Title, @Content, @CreatedBy, @CreatedAt)";
+                         VALUES (@Title, @Content, @CreatedBy, @CreatedAt)";
                 using (MySqlCommand cmd = new MySqlCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@Title", title);
                     cmd.Parameters.AddWithValue("@Content", content);
-                    cmd.Parameters.AddWithValue("@CreatedBy", createdBy);
-                    cmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now); // asetetaan nyt
-
+                    cmd.Parameters.AddWithValue("@CreatedBy", CreatedBy); // creator.userId
+                    cmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
                     cmd.ExecuteNonQuery();
+
                 }
             }
         }
@@ -234,13 +233,14 @@ namespace hellopello
         // Käytetään listaa taulukon sijaan
         public List<ContractBlock> contractBlocks = new List<ContractBlock>();
 
-        public Contract(string tl, string name, string st, int creator)
+        public Contract(string tl, string name, string st, int creator, int ConID)
         {
             title = tl;
             clientName = name;
             status = st;
             createdBy = creator;
             createdAt = DateTime.Now;
+            contractId = ConID;
         }
 
         public void addBlock(ContractBlock block, int order)
@@ -281,18 +281,21 @@ namespace hellopello
                 {
                     if (block == null) continue; // ohitetaan null-arvot
 
-                    string blockQuery = @"INSERT INTO contractblocks (Title, Content, CreatedBy, CreatedAt, ContractId)
-                                      VALUES (@Title, @Content, @CreatedBy, @CreatedAt, @ContractId)";
-                    using (MySqlCommand blockCmd = new MySqlCommand(blockQuery, connection))
-                    {
-                        blockCmd.Parameters.AddWithValue("@Title", title);
-                        blockCmd.Parameters.AddWithValue("@Content", content);
-                        blockCmd.Parameters.AddWithValue("@CreatedBy", createdBy);
-                        blockCmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
-                        blockCmd.Parameters.AddWithValue("@ContractId", contractId);
+                    string blockQuery = @"INSERT INTO contracts (Title, ClientName, Status, CreatedBy, CreatedAt)
+    VALUES (@Title, @ClientName, @Status, @CreatedBy, @CreatedAt);
+";
 
-                        blockCmd.ExecuteNonQuery();
+                    using (MySqlCommand cmd = new MySqlCommand(insertContract, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Title", title);                 // esim. "Vuokrasopimus"
+                        cmd.Parameters.AddWithValue("@ClientName", clientName ?? (object)DBNull.Value); // salli NULL
+                        cmd.Parameters.AddWithValue("@Status", status);               // esim. "Aktiivinen"
+                        cmd.Parameters.AddWithValue("@CreatedBy", createdBy);         // olemassa oleva users.UserId
+                        cmd.Parameters.AddWithValue("@CreatedAt", createdAt);         // DateTime.Now
+
+                        cmd.ExecuteNonQuery();
                     }
+
                 }
             }
         }
@@ -316,7 +319,19 @@ namespace hellopello
                         int id = reader.GetInt32("UserId");
                         string name = reader.GetString("UserName");
                         string email = reader.GetString("Email");
-                        UserRole role = (UserRole)Enum.Parse(typeof(UserRole), reader.GetString("Role"));
+
+                        // Haetaan rooli tietokannasta
+                        string roleStr = reader.IsDBNull(reader.GetOrdinal("Role"))
+                            ? "EXTERNAL"
+                            : reader.GetString("Role");
+
+                        UserRole role;
+                        // TryParse varmistaa ettei tule virhettä, case-insensitive
+                        if (!Enum.TryParse<UserRole>(roleStr, true, out role))
+                        {
+                            role = UserRole.EXTERNAL; // oletus jos arvo ei kelpaa
+                        }
+
                         users.Add(new User(id, name, email, role));
                     }
                 }
@@ -340,13 +355,24 @@ namespace hellopello
                             int id = reader.GetInt32("UserId");
                             string name = reader.GetString("UserName");
                             string email = reader.GetString("Email");
-                            UserRole role = (UserRole)Enum.Parse(typeof(UserRole), reader.GetString("Role"));
+
+                            string roleStr = reader.IsDBNull(reader.GetOrdinal("Role"))
+                                ? "EXTERNAL"
+                                : reader.GetString("Role");
+
+                            UserRole role;
+                            if (!Enum.TryParse<UserRole>(roleStr, true, out role))
+                            {
+                                role = UserRole.EXTERNAL;
+                            }
+
                             return new User(id, name, email, role);
                         }
                     }
                 }
             }
             return null;
+
         }
     }
 
@@ -475,37 +501,68 @@ namespace hellopello
         {
             static void Main(string[] args)
             {
-                // Testataan User-luokka
-                User u1 = new User(1, "Kaisa", "test@example.com", UserRole.INTERNAL);
-                u1.AddUser();
-                Console.WriteLine("User added: " + u1.Username + " (" + u1.Email + ")");
+            Console.WriteLine("=== TESTAUSOHJELMA: KK-sopimusjärjestelmä ===");
 
-                u1.editUser("KaisaTest", "kaisa@example.com");
-                Console.WriteLine("User edited: " + u1.Username + " (" + u1.Email + ")");
+            // 1. Luodaan käyttäjä
+            User u1 = new User(1, "Matti", "matti@testi.fi", UserRole.INTERNAL);
+            Console.WriteLine("Luotu käyttäjä: " + u1);
 
-                // HUOM: tämä poistaa rivin tietokannasta
-                 u1.deleteUser();
-                 Console.WriteLine("User deleted");
+            // Tallennetaan käyttäjä tietokantaan
+            u1.AddUser();
 
-                // Testataan ContractBlock-luokka
-                //ContractBlock cb = new ContractBlock(1, "Sopimus A", "Sisältöä...");
-                //cb.SaveBlock(1);
-                //Console.WriteLine("ContractBlock saved");
+            // Muokataan käyttäjää
+            u1.editUser("Matti Meikäläinen", "matti.meikalainen@testi.fi");
+            Console.WriteLine("Muokattu käyttäjä: " + u1);
 
-                //cb.EditBlock("Sopimus A - muokattu", "Uusi sisältö");
-                //cb.UpdateBlock();
-                //Console.WriteLine("ContractBlock updated");
+            // 2. Luodaan sopimuslohko
+            ContractBlock block1 = new ContractBlock(1, "Ehdot", "Auto palautettava tankki täynnä.");
+            block1.SaveBlock(u1.role.GetHashCode()); // tallennus tietokantaan
+            Console.WriteLine("Tallennettu sopimuslohko: Ehdot");
 
-                // HUOM: tämä poistaa rivin tietokannasta
-                // cb.DeleteBlock();
-                // Console.WriteLine("ContractBlock deleted");
+            // Muokataan lohkoa
+            block1.EditBlock("Ehdot (päivitetty)", "Auto palautettava tankki täynnä tai lisämaksu 80 €.");
+            block1.UpdateBlock();
+            Console.WriteLine("Päivitetty sopimuslohko.");
+
+            // 3. Luodaan sopimus
+            Contract contract = new Contract("Vuokrasopimus", "Asiakas Oy", "Aktiivinen", 1, 1);
+            contract.addBlock(block1, 1);
+            contract.SaveContract();
+            Console.WriteLine("Sopimus tallennettu tietokantaan.");
+
+            // 4. Haetaan asiakkaita DataServicen kautta
+            DataService ds = new DataService();
+            List<User> allUsers = ds.GetAllCustomers();
+            Console.WriteLine("Tietokannasta haetut käyttäjät:");
+            foreach (var usr in allUsers)
+            {
+                Console.WriteLine(usr);
             }
 
+            // Haetaan yksi käyttäjä nimellä
+            User foundUser = ds.GetUserByName("Matti");
+            if (foundUser != null)
+            {
+                Console.WriteLine("Haettu käyttäjä: " + foundUser);
+            }
+
+            // 5. Käynnistetään UI
+            Console.WriteLine("\n=== Käynnistetään käyttöliittymä ===");
+            UI ui = new UI();
+            ui.Run();
+
+            // Lopuksi poistetaan käyttäjä
+            u1.deleteUser();
+            Console.WriteLine("Käyttäjä poistettu tietokannasta.");
+        
+
+    }
 
 
 
 
-        }
+
+}
 
     
 }
