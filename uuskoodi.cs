@@ -23,7 +23,7 @@ namespace hellopello
     public class User
     {
 
-        private int userId;
+        public int userId;
         private string userName;
         private string email;
 
@@ -78,7 +78,7 @@ namespace hellopello
                         {
                             insertCmd.Parameters.AddWithValue("@userName", userName);
                             insertCmd.Parameters.AddWithValue("@email", email);
-                            insertCmd.Parameters.AddWithValue("@Role", Role.ToString()); // tai int jos tallennat numerona
+                            insertCmd.Parameters.AddWithValue("@Role", Role); // tai int jos tallennat numerona
                             insertCmd.ExecuteNonQuery();
                         }
 
@@ -136,7 +136,7 @@ namespace hellopello
 
     public class ContractBlock // sopimuslohko
     {
-        private int blockId;
+        public int blockId;
         private string title;
         private string content;
         private int CreatedBy;
@@ -172,9 +172,13 @@ namespace hellopello
                 {
                     cmd.Parameters.AddWithValue("@Title", title);
                     cmd.Parameters.AddWithValue("@Content", content);
-                    cmd.Parameters.AddWithValue("@CreatedBy", CreatedBy); // creator.userId
+                    cmd.Parameters.AddWithValue("@CreatedBy", createdBy); // creator.userId
                     cmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
                     cmd.ExecuteNonQuery();
+
+                    // Hae AUTO_INCREMENT ID
+                    this.blockId = (int)cmd.LastInsertedId;
+
 
                 }
             }
@@ -220,36 +224,72 @@ namespace hellopello
     }
     public class Comment
     {
-
         private Contract contract;
         private User user;
-        public User Role { get; set; }
+        public int CommentId { get; private set; }   // AUTO_INCREMENT ID
+        public int ContractId { get; private set; }
+        public int AuthorId { get; private set; }
+        public string Visibility { get; set; }       // esim. "Public" / "Private"
         private string content;
         private DateTime createdAt;
 
-
-        public void addComment(int id, Contract c, User u, string cnt)
+        // Lisää kommentti ja tallenna tietokantaan
+        public void addComment(Contract c, User u, string cnt, string visibility)
         {
-
-            Contract contract = c;
-            User user = u;
+            contract = c;
+            user = u;
             content = cnt;
             createdAt = DateTime.Now;
+            Visibility = visibility;
 
+            string MySqlCon = "Server=127.0.0.1;Port=3306;Database=uusiyritys;Uid=root;Pwd=;";
+            using (MySqlConnection connection = new MySqlConnection(MySqlCon))
+            {
+                connection.Open();
+                string query = @"INSERT INTO comment (ContractId, AuthorId, Visibility, Content, CreatedAt)
+                             VALUES (@ContractId, @AuthorId, @Visibility, @Content, @CreatedAt)";
+                using (MySqlCommand cmd = new MySqlCommand(query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@ContractId", c.contractId);
+                    cmd.Parameters.AddWithValue("@AuthorId", u.userId);
+                    cmd.Parameters.AddWithValue("@Visibility", visibility);
+                    cmd.Parameters.AddWithValue("@Content", cnt);
+                    cmd.Parameters.AddWithValue("@CreatedAt", createdAt);
 
+                    cmd.ExecuteNonQuery();
+
+                    // Hae AUTO_INCREMENT CommentId
+                    CommentId = (int)cmd.LastInsertedId;
+                }
+            }
+
+            Console.WriteLine("Comment created with ID: " + CommentId);
         }
 
+        // Muokkaa kommentin sisältöä ja päivitä tietokantaan
         public void editComment(string newContent)
         {
             content = newContent;
 
+            string MySqlCon = "Server=127.0.0.1;Port=3306;Database=uusiyritys;Uid=root;Pwd=;";
+            using (MySqlConnection connection = new MySqlConnection(MySqlCon))
+            {
+                connection.Open();
+                string query = @"UPDATE comment SET Content = @Content WHERE CommentId = @CommentId";
+                using (MySqlCommand cmd = new MySqlCommand(query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@Content", newContent);
+                    cmd.Parameters.AddWithValue("@CommentId", CommentId);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            Console.WriteLine("Comment " + CommentId + " updated.");
         }
-
-
     }
-        public class Contract
+    public class Contract
         {
-            private int contractId;
+            public int contractId;
             private string title;
             private string clientName;
             private string status;
@@ -556,20 +596,34 @@ namespace hellopello
             Console.WriteLine("Enter block content:");
             string content = Console.ReadLine();
 
+            // BlockId = 0, koska AUTO_INCREMENT luo sen
             ContractBlock block = new ContractBlock(0, title, content);
-            block.SaveBlock(1); // esim. CreatedBy=1
-            Console.WriteLine("Contract block created.");
+
+            // CreatedBy = 1 tässä esimerkissä, mutta käytä kirjautuneen käyttäjän ID:tä
+            block.SaveBlock(1);
+
+            // Tulosta luodun lohkon ID
+            Console.WriteLine("Contract block created with ID: " + block.blockId);
         }
 
         private void CopyContractBlock()
         {
             Console.WriteLine("Enter original block id:");
             int id = Convert.ToInt32(Console.ReadLine());
-            ContractBlock original = new ContractBlock(id, "origTitle", "origContent"); // tässä pitäisi hakea DB:stä
-            ContractBlock copy = original.CopyBlock(id + 100, "Copy of " + original.ToString(), "Copied content");
+
+            // Tässä pitäisi hakea DB:stä oikea title/content, mutta esimerkissä kovakoodattu
+            ContractBlock original = new ContractBlock(id, "origTitle", "origContent");
+
+            // Luo kopio
+            ContractBlock copy = original.CopyBlock(0, "Copy of " + original.ToString(), "Copied content");
+
+            // Tallenna kopio
             copy.SaveBlock(1);
-            Console.WriteLine("Block copied.");
+
+            // Tulosta uuden kopion ID
+            Console.WriteLine("Block copied with ID: " + copy.blockId);
         }
+
 
         private void UpdateContractBlock()
         {
@@ -604,10 +658,21 @@ namespace hellopello
             Console.WriteLine("Enter status:");
             string status = Console.ReadLine();
 
-            Contract contract = new Contract(title, client, status, 1, 0);
+            // Käyttäjä-ID (tässä kovakoodattu 1, mutta login-flow'ssa haetaan oikea)
+            int currentUserId = 1;
+
+            // ContractId annetaan 0, koska SaveContract luo sen AUTO_INCREMENT:llä
+            Contract contract = new Contract(title, client, status, currentUserId, 0);
+
+            // Tallennetaan sopimus
             contract.SaveContract();
-            Console.WriteLine("Contract created.");
+
+            // Hae luodun rivin ID tietokannasta
+            int newContractId = contract.contractId; // tämä pitää asettaa SaveContract-metodissa LastInsertedId:stä
+
+            Console.WriteLine("Contract created with ID: " + newContractId);
         }
+
 
         private void AddBlockToContract()
         {
@@ -638,12 +703,18 @@ namespace hellopello
             Console.WriteLine("Enter comment:");
             string comment = Console.ReadLine();
 
-            Contract contract = new Contract("title", "client", "status", 1, contractId);
+            // Esimerkkikäyttäjä, käytä kirjautuneen käyttäjän ID:tä oikeasti
             User user = new User(1, "TestUser", "test@mail.com", UserRole.INTERNAL);
+
+            // Luo Contract-olio, jossa on oikea ContractId
+            Contract contract = new Contract("title", "client", "status", user.userId, contractId);
+
             Comment c = new Comment();
-            c.addComment(contractId, contract, user, comment);
-            Console.WriteLine("Comment added.");
+            c.addComment(contract, user, comment, "Public"); // visibility esim. "Public"
+
+            Console.WriteLine("Comment added with ID: " + c.CommentId);
         }
+
 
         private void DeleteContract()
         {
