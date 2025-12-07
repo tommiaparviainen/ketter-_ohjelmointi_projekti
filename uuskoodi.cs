@@ -141,6 +141,10 @@ namespace hellopello
         private string content;
         private int CreatedBy;
         private DateTime CreatedAt;
+        public string Category { get; private set; } = "General";
+        public bool IsPublic { get; private set; } = true;
+
+
 
         public ContractBlock(int block, string tit, string cont)
         {
@@ -166,21 +170,20 @@ namespace hellopello
             using (MySqlConnection connection = new MySqlConnection(MySqlCon))
             {
                 connection.Open();
-                string query = @"INSERT INTO contractblocks (Title, Content, CreatedBy, CreatedAt) 
-                         VALUES (@Title, @Content, @CreatedBy, @CreatedAt)";
-                using (MySqlCommand cmd = new MySqlCommand(query, connection))
+                string query = @"INSERT INTO contractblocks (Title, Content, Category, IsPublic, CreatedBy, CreatedAt)
+                             VALUES (@Title, @Content, @Category, @IsPublic, @CreatedBy, @CreatedAt)";
+                using (var cmd = new MySqlCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@Title", title);
                     cmd.Parameters.AddWithValue("@Content", content);
-                    cmd.Parameters.AddWithValue("@CreatedBy", createdBy); // creator.userId
+                    cmd.Parameters.AddWithValue("@Category", Category);
+                    cmd.Parameters.AddWithValue("@IsPublic", IsPublic);
+                    cmd.Parameters.AddWithValue("@CreatedBy", createdBy);
                     cmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
                     cmd.ExecuteNonQuery();
-
-                    // Hae AUTO_INCREMENT ID
-                    this.blockId = (int)cmd.LastInsertedId;
-
-
+                    blockId = (int)cmd.LastInsertedId;
                 }
+
             }
         }
 
@@ -218,6 +221,11 @@ namespace hellopello
                     cmd.ExecuteNonQuery();
                 }
             }
+        }
+        public void SetCategory(string category, bool isPublic)
+        {
+            Category = category;
+            IsPublic = isPublic;
         }
 
 
@@ -286,87 +294,153 @@ namespace hellopello
 
             Console.WriteLine("Comment " + CommentId + " updated.");
         }
+
     }
-    public class Contract
+    public class Approval
+    {
+        public int ApprovalId { get; set; }
+        public int ContractId { get; private set; }
+        public int ApproverId { get; private set; }
+        public string Status { get; private set; }
+        public string Comment { get; private set; }
+        public DateTime CreatedAt { get; private set; }
+
+        public Approval(int contractId, int approverId, string note)
         {
-            public int contractId;
-            private string title;
-            private string clientName;
-            private string status;
-            private string content;
-            private int createdBy;
-            private DateTime createdAt;
+            ContractId = contractId;
+            ApproverId = approverId;
+            Status = "Pending";
+            Comment = note;
+            CreatedAt = DateTime.Now;
+        }
 
-            // Käytetään listaa taulukon sijaan
-            public List<ContractBlock> contractBlocks = new List<ContractBlock>();
-
-            public Contract(string tl, string name, string st, int creator, int ConID)
+        public void SaveApproval()
+        {
+            string MySqlCon = "Server=127.0.0.1;Port=3306;Database=uusiyritys;Uid=root;Pwd=;";
+            using (var connection = new MySqlConnection(MySqlCon))
             {
-                title = tl;
-                clientName = name;
-                status = st;
-                createdBy = creator;
-                createdAt = DateTime.Now;
-                contractId = ConID;
-            }
-
-            public void addBlock(ContractBlock block, int order)
-            {
-                contractBlocks.Add(block);
-            }
-
-            public void SaveContract()
-            {
-                string MySqlCon = "Server=127.0.0.1;Port=3306;Database=uusiyritys;Uid=root;Pwd=;";
-                using (MySqlConnection connection = new MySqlConnection(MySqlCon))
+                connection.Open();
+                string query = @"INSERT INTO approvals (ContractId, ApproverId, Status, Comment, CreatedAt)
+                             VALUES (@ContractId, @ApproverId, @Status, @Comment, @CreatedAt)";
+                using (var cmd = new MySqlCommand(query, connection))
                 {
-                    connection.Open();
+                    cmd.Parameters.AddWithValue("@ContractId", ContractId);
+                    cmd.Parameters.AddWithValue("@ApproverId", ApproverId);
+                    cmd.Parameters.AddWithValue("@Status", Status);
+                    cmd.Parameters.AddWithValue("@Comment", Comment);
+                    cmd.Parameters.AddWithValue("@CreatedAt", CreatedAt);
+                    cmd.ExecuteNonQuery();
+                    ApprovalId = (int)cmd.LastInsertedId;
+                }
+            }
+            Console.WriteLine("Approval request created with ID: " + ApprovalId);
+        }
 
-                    // 1. Tallennetaan contract
-                    string insertContract = @"INSERT INTO contracts (Title, ClientName, Status, CreatedBy, CreatedAt)
+        public void SetStatus(string newStatus, string note = "")
+        {
+            Status = newStatus;
+            Comment = note;
+
+            string MySqlCon = "Server=127.0.0.1;Port=3306;Database=uusiyritys;Uid=root;Pwd=;";
+            using (var connection = new MySqlConnection(MySqlCon))
+            {
+                connection.Open();
+                string query = @"UPDATE approvals SET Status=@Status, Comment=@Comment WHERE ApprovalId=@ApprovalId";
+                using (var cmd = new MySqlCommand(query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@Status", newStatus);
+                    cmd.Parameters.AddWithValue("@Comment", note);
+                    cmd.Parameters.AddWithValue("@ApprovalId", ApprovalId);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            Console.WriteLine("Approval " + ApprovalId + " updated to " + Status);
+        }
+    }
+
+
+    public class Contract
+    {
+        public int contractId;
+        private string title;
+        private string clientName;
+        private string status;
+        private string content;
+        private int createdBy;
+        private DateTime createdAt;
+
+        // Käytetään listaa taulukon sijaan
+        public List<ContractBlock> contractBlocks = new List<ContractBlock>();
+
+        public Contract(string tl, string name, string st, int creator, int ConID)
+        {
+            title = tl;
+            clientName = name;
+            status = st;
+            createdBy = creator;
+            createdAt = DateTime.Now;
+            contractId = ConID;
+        }
+
+        public void addBlock(ContractBlock block, int order)
+        {
+            contractBlocks.Add(block);
+        }
+
+        public void SaveContract()
+        {
+            string MySqlCon = "Server=127.0.0.1;Port=3306;Database=uusiyritys;Uid=root;Pwd=;";
+            using (MySqlConnection connection = new MySqlConnection(MySqlCon))
+            {
+                connection.Open();
+
+                // 1. Tallennetaan contract
+                string insertContract = @"INSERT INTO contracts (Title, ClientName, Status, CreatedBy, CreatedAt)
                                       VALUES (@Title, @ClientName, @Status, @CreatedBy, @CreatedAt)";
+                using (MySqlCommand cmd = new MySqlCommand(insertContract, connection))
+                {
+                    cmd.Parameters.AddWithValue("@Title", title);
+                    cmd.Parameters.AddWithValue("@ClientName", clientName);
+                    cmd.Parameters.AddWithValue("@Status", status);
+                    cmd.Parameters.AddWithValue("@CreatedBy", createdBy);
+                    cmd.Parameters.AddWithValue("@CreatedAt", createdAt);
+
+                    cmd.ExecuteNonQuery();
+                    contractId = (int)cmd.LastInsertedId;
+
+                }
+
+                // Haetaan luodun contractin ID erikseen
+                string idQuery = "SELECT LAST_INSERT_ID()";
+                using (MySqlCommand idCmd = new MySqlCommand(idQuery, connection))
+                {
+                    contractId = Convert.ToInt32(idCmd.ExecuteScalar());
+                }
+
+                // 2. Tallennetaan kaikki blockit tähän contractiin
+                foreach (var block in contractBlocks)
+                {
+                    if (block == null) continue; // ohitetaan null-arvot
+
+                    string blockQuery = @"INSERT INTO contracts (Title, ClientName, Status, CreatedBy, CreatedAt)
+                                    VALUES (@Title, @ClientName, @Status, @CreatedBy, @CreatedAt);
+                                      ";
+
                     using (MySqlCommand cmd = new MySqlCommand(insertContract, connection))
                     {
-                        cmd.Parameters.AddWithValue("@Title", title);
-                        cmd.Parameters.AddWithValue("@ClientName", clientName);
-                        cmd.Parameters.AddWithValue("@Status", status);
-                        cmd.Parameters.AddWithValue("@CreatedBy", createdBy);
-                        cmd.Parameters.AddWithValue("@CreatedAt", createdAt);
+                        cmd.Parameters.AddWithValue("@Title", title);                 // esim. "Vuokrasopimus"
+                        cmd.Parameters.AddWithValue("@ClientName", clientName ?? (object)DBNull.Value); // salli NULL
+                        cmd.Parameters.AddWithValue("@Status", status);               // esim. "Aktiivinen"
+                        cmd.Parameters.AddWithValue("@CreatedBy", createdBy);         // olemassa oleva users.UserId
+                        cmd.Parameters.AddWithValue("@CreatedAt", createdAt);         // DateTime.Now
 
                         cmd.ExecuteNonQuery();
                     }
 
-                    // Haetaan luodun contractin ID erikseen
-                    string idQuery = "SELECT LAST_INSERT_ID()";
-                    using (MySqlCommand idCmd = new MySqlCommand(idQuery, connection))
-                    {
-                        contractId = Convert.ToInt32(idCmd.ExecuteScalar());
-                    }
-
-                    // 2. Tallennetaan kaikki blockit tähän contractiin
-                    foreach (var block in contractBlocks)
-                    {
-                        if (block == null) continue; // ohitetaan null-arvot
-
-                        string blockQuery = @"INSERT INTO contracts (Title, ClientName, Status, CreatedBy, CreatedAt)
-                                    VALUES (@Title, @ClientName, @Status, @CreatedBy, @CreatedAt);
-                                      ";
-
-                        using (MySqlCommand cmd = new MySqlCommand(insertContract, connection))
-                        {
-                            cmd.Parameters.AddWithValue("@Title", title);                 // esim. "Vuokrasopimus"
-                            cmd.Parameters.AddWithValue("@ClientName", clientName ?? (object)DBNull.Value); // salli NULL
-                            cmd.Parameters.AddWithValue("@Status", status);               // esim. "Aktiivinen"
-                            cmd.Parameters.AddWithValue("@CreatedBy", createdBy);         // olemassa oleva users.UserId
-                            cmd.Parameters.AddWithValue("@CreatedAt", createdAt);         // DateTime.Now
-
-                            cmd.ExecuteNonQuery();
-                        }
-
-                    }
                 }
             }
         }
+    }
     public class DataService
     {
         private string MySqlCon = "Server=127.0.0.1;Port=3306;Database=uusiyritys;Uid=root;Pwd=;";
@@ -446,7 +520,29 @@ namespace hellopello
             }
             return blocks;
         }
-
+        public List<ContractBlock> GetBlocksForUser(UserRole role)
+        {
+            var blocks = new List<ContractBlock>();
+            using (var connection = new MySqlConnection(MySqlCon))
+            {
+                connection.Open();
+                string query = role == UserRole.EXTERNAL
+                    ? "SELECT BlockId, Title, Content FROM contractblocks WHERE IsPublic = 1"
+                    : "SELECT BlockId, Title, Content FROM contractblocks";
+                using (var cmd = new MySqlCommand(query, connection))
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        int id = reader.GetInt32("BlockId");
+                        string title = reader.GetString("Title");
+                        string content = reader.GetString("Content");
+                        blocks.Add(new ContractBlock(id, title, content));
+                    }
+                }
+            }
+            return blocks;
+        }
         // --- Contracts ---
         public List<Contract> GetAllContracts()
         {
@@ -472,11 +568,29 @@ namespace hellopello
             return contracts;
         }
 
+        public void LinkBlockToContract(int contractId, int blockId, int sortOrder)
+        {
+            using (var connection = new MySqlConnection(MySqlCon))
+            {
+                connection.Open();
+                string q = @"INSERT INTO contract_contractblock (ContractId, BlockId, SortOrder)
+                     VALUES (@ContractId, @BlockId, @SortOrder)";
+                using (var cmd = new MySqlCommand(q, connection))
+                {
+                    cmd.Parameters.AddWithValue("@ContractId", contractId);
+                    cmd.Parameters.AddWithValue("@BlockId", blockId);
+                    cmd.Parameters.AddWithValue("@SortOrder", sortOrder);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+
     }
 
-        class MyApplication
-        {
-         private DataService myDataService;
+    class MyApplication
+    {
+        private DataService myDataService;
 
         public MyApplication()
         {
@@ -531,6 +645,11 @@ namespace hellopello
             Console.WriteLine("12. Save contract");
             Console.WriteLine("13. Add comment to contract");
             Console.WriteLine("14. Delete contract");
+            Console.WriteLine("15. Show all blocks");
+            Console.WriteLine("16. Show all contracts");
+            Console.WriteLine("17. Request approval for contract");
+            Console.WriteLine("18. Approve/Reject approval request");
+            Console.WriteLine("logout (to sign out)");
             Console.WriteLine("exit (to finish)");
         }
 
@@ -724,8 +843,40 @@ namespace hellopello
             Console.WriteLine($"Contract {contractId} deleted.");
         }
 
+
+
+        //-- approvals--
+        private void RequestApproval()
+        {
+            Console.WriteLine("Enter contract id:");
+            int contractId = Convert.ToInt32(Console.ReadLine());
+            Console.WriteLine("Enter approver user id:");
+            int approverId = Convert.ToInt32(Console.ReadLine());
+            Console.WriteLine("Enter note:");
+            string note = Console.ReadLine();
+
+            Approval approval = new Approval(contractId, approverId, note);
+            approval.SaveApproval();
+        }
+
+        private void ApproveOrReject()
+        {
+            Console.WriteLine("Enter approval id:");
+            int approvalId = Convert.ToInt32(Console.ReadLine());
+            Console.WriteLine("Enter new status (Approved/Rejected):");
+            string status = Console.ReadLine();
+            Console.WriteLine("Enter note:");
+            string note = Console.ReadLine();
+
+            // Tässä pitäisi hakea Approval DB:stä, mutta esimerkissä luodaan dummy
+            Approval approval = new Approval(0, 0, "");
+            approval.ApprovalId = approvalId; // aseta ID manuaalisesti
+            approval.SetStatus(status, note);
+        }
+    }
+
         // --- Run ---
-        public void Run()
+       public void Run()
         {
             bool loggedIn = false;
             User currentUser = null;
@@ -736,9 +887,8 @@ namespace hellopello
                 {
                     Console.Clear();
                     Console.WriteLine("Welcome! You must create or login before using contracts.");
-                    Console.WriteLine("1. Show all customers");
-                    Console.WriteLine("2. Create user");
-                    Console.WriteLine("3. Login");
+                    Console.WriteLine("1. Create user");
+                    Console.WriteLine("2. Login");
                     Console.WriteLine("exit (to finish)");
 
                     string command = Console.ReadLine();
@@ -746,12 +896,9 @@ namespace hellopello
                     switch (command)
                     {
                         case "1":
-                            Console.WriteLine(myApp.GetAllCustomers());
-                            break;
-                        case "2":
                             CreateUser();
                             break;
-                        case "3":
+                        case "2":
                             Console.WriteLine("Enter username:");
                             string username = Console.ReadLine();
                             currentUser = myApp.GetCustomerDataByName(username);
@@ -774,7 +921,10 @@ namespace hellopello
                 }
                 else
                 {
-                    ShowMenu(); // tämä on se laajempi menu, jossa blockit ja contractit
+                    ShowMenu(); // laajempi menu
+                    Console.WriteLine("17. Request approval for contract");
+                    Console.WriteLine("18. Approve/Reject approval request");
+
                     string command = Console.ReadLine();
 
                     switch (command)
@@ -794,6 +944,8 @@ namespace hellopello
                         case "14": DeleteContract(); break;
                         case "15": Console.WriteLine(myApp.GetAllBlocks()); break;
                         case "16": Console.WriteLine(myApp.GetAllContracts()); break;
+                        case "17": RequestApproval(); break;
+                        case "18": ApproveOrReject(); break;
                         case "logout":
                             loggedIn = false;
                             currentUser = null;
@@ -809,109 +961,108 @@ namespace hellopello
             }
         }
 
-    }
 
-    //class UI
-    //{
-    //    MyApplication myApp = new MyApplication();
+        //class UI
+        //{
+        //    MyApplication myApp = new MyApplication();
 
-    //    public void ShowMenu()
-    //    {
-    //        Console.WriteLine("In this app you can (select with number):");
-    //        Console.WriteLine("1. Show all customers");
-    //        Console.WriteLine("2. Show data of one customer only");
-    //        Console.WriteLine("exit (to finish)");
-    //    }
+        //    public void ShowMenu()
+        //    {
+        //        Console.WriteLine("In this app you can (select with number):");
+        //        Console.WriteLine("1. Show all customers");
+        //        Console.WriteLine("2. Show data of one customer only");
+        //        Console.WriteLine("exit (to finish)");
+        //    }
 
-    //    private void ShowListEnumerated(string[] stringList)
-    //    {
-    //        for (int i = 0; i < stringList.Length; i++)
-    //            Console.WriteLine((i + 1) + ": " + stringList[i]);
-    //    }
+        //    private void ShowListEnumerated(string[] stringList)
+        //    {
+        //        for (int i = 0; i < stringList.Length; i++)
+        //            Console.WriteLine((i + 1) + ": " + stringList[i]);
+        //    }
 
-    //    private void ShowOneCustomer()
-    //    {
-    //        bool goOn = true;
-    //        while (goOn)
-    //        {
-    //            Console.Clear();
-    //            string[] customers = myApp.GetAllCustomers().Split('\n');
+        //    private void ShowOneCustomer()
+        //    {
+        //        bool goOn = true;
+        //        while (goOn)
+        //        {
+        //            Console.Clear();
+        //            string[] customers = myApp.GetAllCustomers().Split('\n');
 
-    //            if (customers.Length == 0)
-    //            {
-    //                Console.WriteLine("No customers available in the database");
-    //                break;
-    //            }
+        //            if (customers.Length == 0)
+        //            {
+        //                Console.WriteLine("No customers available in the database");
+        //                break;
+        //            }
 
-    //            ShowListEnumerated(customers);
-    //            Console.WriteLine("Enter customer number:");
+        //            ShowListEnumerated(customers);
+        //            Console.WriteLine("Enter customer number:");
 
-    //            try
-    //            {
-    //                int custNr = Convert.ToInt32(Console.ReadLine());
-    //                if (custNr < 1 || custNr > customers.Length)
-    //                    throw new Exception();
+        //            try
+        //            {
+        //                int custNr = Convert.ToInt32(Console.ReadLine());
+        //                if (custNr < 1 || custNr > customers.Length)
+        //                    throw new Exception();
 
-    //                string selectedName = customers[custNr - 1].Split(':')[1].Trim().Split(' ')[0];
-    //                User cust = myApp.GetCustomerDataByName(selectedName);
+        //                string selectedName = customers[custNr - 1].Split(':')[1].Trim().Split(' ')[0];
+        //                User cust = myApp.GetCustomerDataByName(selectedName);
 
-    //                if (cust != null)
-    //                {
-    //                    Console.WriteLine($"ID: {cust.role} | Name: {cust.Username} | Email: {cust.Email}");
-    //                }
-    //                else
-    //                {
-    //                    Console.WriteLine("Customer not found.");
-    //                }
-    //            }
-    //            catch
-    //            {
-    //                Console.WriteLine("Invalid input. Try again.");
-    //            }
+        //                if (cust != null)
+        //                {
+        //                    Console.WriteLine($"ID: {cust.role} | Name: {cust.Username} | Email: {cust.Email}");
+        //                }
+        //                else
+        //                {
+        //                    Console.WriteLine("Customer not found.");
+        //                }
+        //            }
+        //            catch
+        //            {
+        //                Console.WriteLine("Invalid input. Try again.");
+        //            }
 
-    //            Console.WriteLine("Want to see another customer data (Y/N)?");
-    //            if (Console.ReadLine().ToUpper() != "Y")
-    //                goOn = false;
-    //        }
-    //    }
+        //            Console.WriteLine("Want to see another customer data (Y/N)?");
+        //            if (Console.ReadLine().ToUpper() != "Y")
+        //                goOn = false;
+        //        }
+        //    }
 
-    //    public void Run()
-    //    {
-    //        ShowMenu();
-    //        string command = Console.ReadLine();
+        //    public void Run()
+        //    {
+        //        ShowMenu();
+        //        string command = Console.ReadLine();
 
-    //        while (true)
-    //        {
-    //            switch (command)
-    //            {
-    //                case "1":
-    //                    Console.Clear();
-    //                    Console.WriteLine(myApp.GetAllCustomers());
-    //                    break;
-    //                case "2":
-    //                    Console.Clear();
-    //                    ShowOneCustomer();
-    //                    break;
-    //                case "exit":
-    //                    Console.WriteLine("Press any key to close the program");
-    //                    Console.ReadLine();
-    //                    return;
-    //                default:
-    //                    Console.WriteLine("Invalid input: You can only select from given options");
-    //                    break;
-    //            }
-    //            ShowMenu();
-    //            command = Console.ReadLine();
-    //        }
-    //    }
-
+        //        while (true)
+        //        {
+        //            switch (command)
+        //            {
+        //                case "1":
+        //                    Console.Clear();
+        //                    Console.WriteLine(myApp.GetAllCustomers());
+        //                    break;
+        //                case "2":
+        //                    Console.Clear();
+        //                    ShowOneCustomer();
+        //                    break;
+        //                case "exit":
+        //                    Console.WriteLine("Press any key to close the program");
+        //                    Console.ReadLine();
+        //                    return;
+        //                default:
+        //                    Console.WriteLine("Invalid input: You can only select from given options");
+        //                    break;
+        //            }
+        //            ShowMenu();
+        //            command = Console.ReadLine();
+        //        }
+        //    }
 
 
 
 
 
 
-    internal class Program
+
+        internal class Program
         {
             static void Main(string[] args)
             {
@@ -921,15 +1072,15 @@ namespace hellopello
                 ui.Run();
 
 
-           }
+            }
 
 
 
 
 
         }
-    
 
-    
+
+
 }
 
