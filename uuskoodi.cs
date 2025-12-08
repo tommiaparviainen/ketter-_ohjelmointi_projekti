@@ -395,25 +395,26 @@ namespace hellopello
             contractBlocks.Add(block);
         }
 
-        public void SaveContract()
+        public void SaveContract(int userId)
         {
             string MySqlCon = "Server=127.0.0.1;Port=3306;Database=uusiyritys;Uid=root;Pwd=;";
             using (MySqlConnection connection = new MySqlConnection(MySqlCon))
             {
                 connection.Open();
-                // 1. Tallennetaan contract
                 string insertContract = @"INSERT INTO contracts (Title, ClientName, Status, CreatedBy, CreatedAt)
-                            VALUES (@Title, @ClientName, @Status, @CreatedBy, @CreatedAt)";
+                          VALUES (@Title, @ClientName, @Status, @CreatedBy, @CreatedAt)";
+
                 using (MySqlCommand cmd = new MySqlCommand(insertContract, connection))
                 {
                     cmd.Parameters.AddWithValue("@Title", title);
                     cmd.Parameters.AddWithValue("@ClientName", clientName);
-                    cmd.Parameters.AddWithValue("@Status", status);
-                    cmd.Parameters.AddWithValue("@CreatedBy", createdBy);
+                    cmd.Parameters.AddWithValue("@Status", status.ToString());
+                    cmd.Parameters.AddWithValue("@CreatedBy", userId);   // sama nimi kuin SQL:ssä
                     cmd.Parameters.AddWithValue("@CreatedAt", createdAt);
 
                     cmd.ExecuteNonQuery();
                     contractId = (int)cmd.LastInsertedId;
+
 
                 }
 
@@ -652,7 +653,7 @@ namespace hellopello
             private int reviewerId;
 
             public object ApprovalId { get; private set; }
-
+            private User currentUser;
             private void ShowMenu(User currentUser)
             {
                 Console.WriteLine("Select an option:");
@@ -774,7 +775,7 @@ namespace hellopello
                 ContractBlock block = new ContractBlock(0, title, content);
 
                 // CreatedBy = 1 tässä esimerkissä, mutta käytä kirjautuneen käyttäjän ID:tä
-                block.SaveBlock(1);
+                block.SaveBlock(currentUser.userId);
 
                 // Tulosta luodun lohkon ID
                 Console.WriteLine("Contract block created with ID: " + block.blockId);
@@ -849,7 +850,7 @@ namespace hellopello
                 Contract contract = new Contract(title, client, status, currentUserId, 0);
 
                 // Tallennetaan sopimus
-                contract.SaveContract();
+                contract.SaveContract(currentUser.userId);
 
                 // Hae luodun rivin ID tietokannasta
                 int newContractId = contract.contractId; // tämä pitää asettaa SaveContract-metodissa LastInsertedId:stä
@@ -876,8 +877,7 @@ namespace hellopello
             {
                 Console.WriteLine("Enter contract id:");
                 int contractId = Convert.ToInt32(Console.ReadLine());
-                Contract contract = new Contract("title", "client", Status.DRAFT, 1, contractId);
-                contract.SaveContract();
+                Contract contract = new Contract("title", "client", Status.DRAFT, currentUser.userId, contractId);
                 Console.WriteLine("Contract saved.");
             }
 
@@ -1094,7 +1094,7 @@ namespace hellopello
             public void Run()
             {
                 bool loggedIn = false;
-                User currentUser = null;
+                currentUser = null;
 
                 while (true)
                 {
