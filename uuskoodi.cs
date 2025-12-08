@@ -170,14 +170,14 @@ namespace hellopello
             using (MySqlConnection connection = new MySqlConnection(MySqlCon))
             {
                 connection.Open();
-                string query = @"INSERT INTO contractblocks (Title, Content, Category, IsPublic, CreatedBy, CreatedAt)
-                             VALUES (@Title, @Content, @Category, @IsPublic, @CreatedBy, @CreatedAt)";
+                string query = @"INSERT INTO contractblocks (Title, Content, Category, CreatedBy, CreatedAt)
+                             VALUES (@Title, @Content, @Category, @CreatedBy, @CreatedAt)";
                 using (var cmd = new MySqlCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@Title", title);
                     cmd.Parameters.AddWithValue("@Content", content);
                     cmd.Parameters.AddWithValue("@Category", Category);
-                    cmd.Parameters.AddWithValue("@IsPublic", IsPublic);
+                    //cmd.Parameters.AddWithValue("@IsPublic", IsPublic);
                     cmd.Parameters.AddWithValue("@CreatedBy", createdBy);
                     cmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
                     cmd.ExecuteNonQuery();
@@ -321,15 +321,18 @@ namespace hellopello
             {
                 connection.Open();
                 string query = @"INSERT INTO approvals (ContractId, ApproverId, Status, Comment, CreatedAt)
-                             VALUES (@ContractId, @ApproverId, @Status, @Comment, @CreatedAt)";
+                         VALUES (@ContractId, @ApproverId, @Status, @Comment, @CreatedAt)";
                 using (var cmd = new MySqlCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@ContractId", ContractId);
-                    cmd.Parameters.AddWithValue("@ApproverId", ApproverId);
+                    cmd.Parameters.AddWithValue("@ApproverId", ApproverId);  
                     cmd.Parameters.AddWithValue("@Status", Status);
                     cmd.Parameters.AddWithValue("@Comment", Comment);
                     cmd.Parameters.AddWithValue("@CreatedAt", CreatedAt);
+
                     cmd.ExecuteNonQuery();
+
+                   
                     ApprovalId = (int)cmd.LastInsertedId;
                 }
             }
@@ -873,10 +876,10 @@ namespace hellopello
             approval.ApprovalId = approvalId; // aseta ID manuaalisesti
             approval.SetStatus(status, note);
         }
-    }
+
 
         // --- Run ---
-       public void Run()
+        public void Run()
         {
             bool loggedIn = false;
             User currentUser = null;
@@ -922,9 +925,7 @@ namespace hellopello
                 else
                 {
                     ShowMenu(); // laajempi menu
-                    Console.WriteLine("17. Request approval for contract");
-                    Console.WriteLine("18. Approve/Reject approval request");
-
+                  
                     string command = Console.ReadLine();
 
                     switch (command)
@@ -960,6 +961,7 @@ namespace hellopello
                 }
             }
         }
+    }
 
 
         //class UI
